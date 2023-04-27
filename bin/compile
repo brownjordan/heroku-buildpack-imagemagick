@@ -4,12 +4,29 @@ indent() {
   sed -u 's/^/       /'
 }
 
+export_env_dir() {
+  env_dir=$1
+  acceptlist_regex=${2:-'^(FFMPEG_DOWNLOAD_URL)$'}
+  denylist_regex=${3:-'^(PATH|GIT_DIR|CPATH|CPPATH|LD_PRELOAD|LIBRARY_PATH)$'}
+  if [ -d "$env_dir" ]; then
+    for e in $(ls $env_dir); do
+      echo "$e" | grep -E "$acceptlist_regex" | grep -qvE "$denylist_regex" &&
+      export "$e=$(cat $env_dir/$e)"
+      :
+    done
+  fi
+}
+
 echo "-----> Install ImageMagick"
 
-BUILD_DIR=$1
+BUILD_DIR=${1:-}
 CACHE_DIR=$2
+ENV_DIR=$3
 VENDOR_DIR="$BUILD_DIR/vendor"
 INSTALL_DIR="$VENDOR_DIR/imagemagick"
+
+export_env_dir $ENV_DIR
+
 IMAGE_MAGICK_VERSION="${IMAGE_MAGICK_VERSION:-7.0.5-10}"
 CACHE_FILE="$CACHE_DIR/imagemagick-$IMAGE_MAGICK_VERSION.tar.gz"
 
@@ -18,6 +35,9 @@ if [ ! -f $CACHE_FILE ]; then
   IMAGE_MAGICK_FILE="ImageMagick-$IMAGE_MAGICK_VERSION.tar.xz"
   IMAGE_MAGICK_DIR="ImageMagick-$IMAGE_MAGICK_VERSION"
   IMAGE_MAGICK_URL="https://www.imagemagick.org/download/releases/$IMAGE_MAGICK_FILE"
+  if [[ -z $IMAGE_MAGICK_DOWNLOAD_HOST ]]; then
+    IMAGE_MAGICK_URL="$IMAGE_MAGICK_DOWNLOAD_HOST/$IMAGE_MAGICK_FILE"
+  fi
 
   echo "-----> Downloading ImageMagick from $IMAGE_MAGICK_URL"
   wget $IMAGE_MAGICK_URL -P $BUILD_DIR | indent
